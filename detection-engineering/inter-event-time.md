@@ -8,11 +8,11 @@ Analyze gaps between consecutive events per entity. Use for beaconing, brute-for
 WITH time_diffs AS (
     SELECT
         {partition_col},  -- entity column (e.g., username, src_ip, account)
-        UNIX_TIMESTAMP(TO_TIMESTAMP({time_col}, 'MM/dd/yyyy HH:mm:ss'))
-            - LAG(UNIX_TIMESTAMP(TO_TIMESTAMP({time_col}, 'MM/dd/yyyy HH:mm:ss')))
+        UNIX_TIMESTAMP(TO_TIMESTAMP({time_col}, '{ts_format}'))
+            - LAG(UNIX_TIMESTAMP(TO_TIMESTAMP({time_col}, '{ts_format}')))
               OVER (
                   PARTITION BY {partition_col}
-                  ORDER BY TO_TIMESTAMP({time_col}, 'MM/dd/yyyy HH:mm:ss')
+                  ORDER BY TO_TIMESTAMP({time_col}, '{ts_format}')
               ) AS time_diff_seconds
     FROM {table}
     WHERE {filters}
@@ -28,7 +28,7 @@ FROM time_diffs
 WHERE time_diff_seconds IS NOT NULL
 GROUP BY {partition_col}
 ORDER BY avg_seconds_between_events ASC  -- lowest avg first reveals most regular/automated behavior
-LIMIT 20;
+LIMIT 20; -- default, adjust if necessary
 ```
 
 ## Segmented by Additional Column
@@ -40,11 +40,11 @@ WITH time_diffs AS (
     SELECT
         {partition_col},
         {segment_col},
-        UNIX_TIMESTAMP(TO_TIMESTAMP({time_col}, 'MM/dd/yyyy HH:mm:ss'))
-            - LAG(UNIX_TIMESTAMP(TO_TIMESTAMP({time_col}, 'MM/dd/yyyy HH:mm:ss')))
+        UNIX_TIMESTAMP(TO_TIMESTAMP({time_col}, '{ts_format}'))
+            - LAG(UNIX_TIMESTAMP(TO_TIMESTAMP({time_col}, '{ts_format}')))
               OVER (
                   PARTITION BY {partition_col}, {segment_col}
-                  ORDER BY TO_TIMESTAMP({time_col}, 'MM/dd/yyyy HH:mm:ss')
+                  ORDER BY TO_TIMESTAMP({time_col}, '{ts_format}')
               ) AS time_diff_seconds
     FROM {table}
     WHERE {filters}
@@ -54,13 +54,14 @@ SELECT
     {segment_col},
     COUNT(*)               AS interval_count,
     AVG(time_diff_seconds) AS avg_seconds_between_events,
+    STDDEV(time_diff_seconds)         AS stddev_seconds_between_events,
     MIN(time_diff_seconds) AS min_seconds_between_events,
     MAX(time_diff_seconds) AS max_seconds_between_events
 FROM time_diffs
 WHERE time_diff_seconds IS NOT NULL
 GROUP BY {partition_col}, {segment_col}
 ORDER BY avg_seconds_between_events ASC
-LIMIT 20;
+LIMIT 20; -- default, adjust if necessary
 ```
 
 ## Interpreting Results
@@ -77,7 +78,4 @@ LIMIT 20;
 - `LAG(...) OVER (...)` returns NULL for the first event per partition — the `WHERE time_diff_seconds IS NOT NULL` filter removes these correctly.
 - `UNIX_TIMESTAMP` returns seconds; divide by 60 for minutes or 3600 for hours if needed for readability.
 - Low `interval_count` (< 3) means the entity had too few events to establish a meaningful rhythm — ask the expert whether to exclude low-event entities from the analysis.
-- Before concluding automation, ask the expert whether password sync, endpoint agents, or scheduled scripts could explain the regular timing.
-- Check the timestamp format the dataset uses and never assume the column is already a timestamp type. 
-- Cast the column to timestamp if its a string. 
-- In the examples above, the timestamp column was a string in the format 'MM/dd/yyyy HH:mm:ss.'
+- Before concluding automation, ask the expert whether password sync, endpoint agents, scheduled scripts, etc. could explain the regular timing.

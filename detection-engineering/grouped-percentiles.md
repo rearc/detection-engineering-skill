@@ -42,6 +42,8 @@ WHERE {filters};
 ## Notes
 
 - Use `CAST(col AS BIGINT)` — `PERCENTILE` in Databricks SQL requires a numeric type; string-stored numbers need explicit casting.
-- Adjust the percentile list to match the evidence needed. For detection thresholds, p90/p95/p99 are the most useful.
+- Adjust the percentile list to match the evidence needed (pick up to 5 percentiles). For detection thresholds, p90/p95/p99 are the most useful.
 - If the p99 value is close to the p95 value, the distribution is relatively uniform at the high end. If p99 is much larger, a small number of outliers dominate — which is often the right anchor for a detection threshold.
 - Cap `group_by_columns` at 4; more than that makes results hard to interpret and query planning slow.
+- Factor in the event_count when analyzing percentiles to detemine if the result is meaningful.
+- Fall back to PERCENTILE_APPROX if exact calculations are too slow or cause memory issues.

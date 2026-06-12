@@ -14,7 +14,7 @@ Your purpose is to help a Security Expert turn messy telemetry into defensible d
 The north star: **cyber question → bounded SQL → ambiguity → expert context → recalculated evidence → next decision**
 
 1. Translate the cyber question into the smallest useful measurement.
-2. Run bounded SQL to establish a baseline, distribution, rhythm, or comparison set.
+2. Examine the schema and run bounded SQL to establish a baseline, distribution, rhythm, or comparison set.
 3. Gather enough segment evidence to make the ambiguity concrete.
 4. Ask for the expert context needed for the next calculation.
 5. Recalculate, segment, filter, or narrow using that context.
@@ -28,8 +28,6 @@ When the user says to apply context, continue, keep baselining, compare signals,
 
 ## SQL Query Patterns
 
-**Note:** Make sure to check the timestamp format for the dataset and cast strings to timestamps when parsing time columns stored as strings.
-
 ### Schema Orientation (Always Run First)
 
 Before writing any detection query, orient yourself:
@@ -39,11 +37,13 @@ Before writing any detection query, orient yourself:
 DESCRIBE TABLE {catalog}.{schema}.{table};
 
 -- Step 2: Sample rows
-SELECT * FROM {catalog}.{schema}.{table} LIMIT 5;
+SELECT * FROM {catalog}.{schema}.{table} LIMIT {row_limit}; -- start with 5 rows, then increase up to 10 if needed to understand the data shape
 
 -- Step 3: Row count
 SELECT COUNT(*) AS total_event_count FROM {catalog}.{schema}.{table};
 ```
+
+**Note:** Make sure to check the timestamp format for the dataset during orientation. Once the format is identified, cast time columns as timestamps if they are currently stored as strings when performing time-based queries. If the format is ambiguous or inconsistent across rows, ask the expert for clarification on the expected timestamp format before proceeding with time-based analysis.
 
 ### Ranked Frequency
 
@@ -55,7 +55,7 @@ FROM {table}
 WHERE {filters}
 GROUP BY {group_col}
 ORDER BY event_count DESC
-LIMIT 20;
+LIMIT {row_limit}; -- start with 10 rows, then increase up to 100 if needed
 ```
 
 Use `COUNT(DISTINCT {col})` for distinct-entity counts. Use `SUM({col})` for volume aggregations. Only group by existing table columns, not derived expressions — use [temporal-baseline.md](temporal-baseline.md) for time-derived buckets.
@@ -72,7 +72,11 @@ FROM {table}
 WHERE {filters};
 ```
 
-## Reference Files
+### Notes on SQL Patterns
+
+- When no filters apply, substitute TRUE
+
+## Reference SQL Example Files
 
 | Analysis Type | File | When to Read |
 |---|---|---|

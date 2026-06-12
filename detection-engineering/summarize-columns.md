@@ -35,7 +35,7 @@ WHERE {col} IS NOT NULL
   AND {filters}
 GROUP BY {col}
 ORDER BY count_result DESC, value ASC
-LIMIT 20;
+LIMIT 20; -- default value, increase if needed
 ```
 
 ## Step 3: Numeric Stats (only if `numeric_cast_count > 0`)
@@ -58,7 +58,7 @@ FROM {table}
 WHERE {col} IS NOT NULL
   AND {filters}
 ORDER BY sample_value ASC
-LIMIT 5;
+LIMIT 5; -- default value, increase if needed
 ```
 
 ## Notes
